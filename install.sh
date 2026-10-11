@@ -18,8 +18,9 @@ ok()   { printf '\033[32m✓ %s\033[0m\n' "$*"; }
 warn() { printf '\033[33m! %s\033[0m\n' "$*"; }
 die()  { printf '\033[31m✗ %s\033[0m\n' "$*"; exit 1; }
 
-# Where the split image parts are hosted (see MANIFEST.md). Leave empty until set.
-IMAGE_BASE_URL="${IMAGE_BASE_URL:-}"
+# Where the image parts + boot binaries are hosted (GitHub release assets; see MANIFEST.md).
+# Private repo while experimental — a public clone can only download these once the repo is public.
+IMAGE_BASE_URL="${IMAGE_BASE_URL:-https://github.com/Aisamo-fi/iDroidik/releases/download/v0.1-exp}"
 IMAGE_BASE_NAME="nand-a16"
 # Pinned sha256 of the reassembled image. The image is verified against THIS value (baked into
 # the repo), never against a .sha256 downloaded from the same host — so a compromised host can't
@@ -138,14 +139,36 @@ if [ -f "$IMAGE_BASE_NAME" ]; then
   fi
 fi
 
-# 3b. boot binaries (not in git — build/obtain per MANIFEST.md). Without these android.sh can't boot.
+# 3b. boot binaries (not in git). Fetch from IMAGE_BASE_URL if set, verify against pinned sha256.
+# Format: "<target-path>|<basename>|<sha256>"
+BOOT_BLOBS="
+work/Image-a16f.lzma|Image-a16f.lzma|f816afbc93fe87667df9a2f903c6d9b4acd4b7098bc949895afd0375b765c086
+work/debug-initrd.cpio.gz|debug-initrd.cpio.gz|fac6aeeef6610a0e41d7114bfb7983d54dca622c9b4da7b4566cb00980c6adc0
+pongo-rel/Pongo-2.6.1.bin|Pongo-2.6.1.bin|6e8c39fff53fdb264409cd1237df0ed12363ad9a7f52f1191e3f578d78911a3e
+patch-vulkan/vulkan.pastel.so|vulkan.pastel.so|715120039e17d2c234bc2b293ee8f9b2253e23094c935112c6934c6320b91eee
+"
 boot_missing=""
-for f in work/Image-a16f.lzma work/debug-initrd.cpio.gz pongo-rel/Pongo-2.6.1.bin patch-vulkan/vulkan.pastel.so; do
-  [ -f "$f" ] || boot_missing="$boot_missing $f"
+echo "$BOOT_BLOBS" | while IFS='|' read -r path name sha; do
+  [ -n "$path" ] || continue
+  if [ ! -f "$path" ] && [ -n "$IMAGE_BASE_URL" ]; then
+    mkdir -p "$(dirname "$path")"
+    echo "  fetching $name"
+    curl -fSL "$IMAGE_BASE_URL/$name" -o "$path.tmp" 2>/dev/null && mv "$path.tmp" "$path" || rm -f "$path.tmp"
+  fi
+done
+# verify each boot blob against its pinned sha (separate loop: the while-pipe runs in a subshell)
+echo "$BOOT_BLOBS" | while IFS='|' read -r path name sha; do
+  [ -n "$path" ] || continue
+  [ -f "$path" ] || continue
+  got=$(shasum -a 256 "$path" | cut -d' ' -f1)
+  [ "$got" = "$sha" ] || { warn "$path sha256 mismatch — removing (expected $sha)"; mv -f "$path" "$path.BAD" 2>/dev/null; }
+done
+for b in work/Image-a16f.lzma work/debug-initrd.cpio.gz pongo-rel/Pongo-2.6.1.bin patch-vulkan/vulkan.pastel.so; do
+  [ -f "$b" ] || boot_missing="$boot_missing $b"
 done
 if [ -n "$boot_missing" ]; then
   step_missing=1
-  warn "missing boot binaries (build/obtain per MANIFEST.md):"
+  warn "missing/invalid boot binaries (build per docs/BUILD.md, or set IMAGE_BASE_URL to a host that has them):"
   for f in $boot_missing; do echo "    $f"; done
 fi
 
