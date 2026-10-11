@@ -1,0 +1,205 @@
+# iDroidik kernel patches for Image-a16f.lzma (GPL-2.0 corresponding source)
+# Base: https://github.com/corellium/linux-sandcastle.git
+# Base commit: 0c2f7dda13d67bb7e06123df516f8bdb1000a79b (Linux 5.4.14, Sandcastle)
+# Build config: work/android16-kernel.config ; toolchain: gcc 7.5 (kbuild7/Dockerfile)
+# Apply:  git clone ... linux-sandcastle && cd linux-sandcastle && git checkout 0c2f7dda && git apply <this-file>
+#
+diff --git a/drivers/android/binder.c b/drivers/android/binder.c
+index 976a69420..106b3198b 100644
+--- a/drivers/android/binder.c
++++ b/drivers/android/binder.c
+@@ -6141,7 +6141,7 @@ static int __init binder_init(void)
+ 				    &binder_transaction_log_fops);
+ 	}
+ 
+-	if (!IS_ENABLED(CONFIG_ANDROID_BINDERFS) &&
++	if (/* sandcastle: keep legacy binder devices for old userspace */ 
+ 	    strcmp(binder_devices_param, "") != 0) {
+ 		/*
+ 		* Copy the module_parameter string, because we don't want to
+diff --git a/drivers/power/reset/hx-reboot.c b/drivers/power/reset/hx-reboot.c
+index 34e67791e..7ff19fc2d 100644
+--- a/drivers/power/reset/hx-reboot.c
++++ b/drivers/power/reset/hx-reboot.c
+@@ -14,6 +14,8 @@
+ #include <linux/platform_device.h>
+ #include <linux/nvmem-consumer.h>
+ #include <linux/reboot.h>
++#include <linux/kmsg_dump.h>
++#include <linux/string.h>
+ 
+ #define REG_RESET_0             0x00
+ #define REG_UNKNOWN_0           0x04
+@@ -41,8 +43,119 @@ struct hx_reboot {
+ 
+ static struct hx_reboot *hx_reboot = NULL;
+ 
++/* sandcastle debug: hx_reboot.noreboot=1 freezes instead of rebooting so the console log stays on screen */
++static bool noreboot;
++module_param(noreboot, bool, 0644);
++
++/* Lines that only describe the shutdown itself; dropped from the replay. */
++/* Only lines likely to explain a failed boot are replayed. */
++static bool hx_log_is_interesting(const char *l)
++{
++    static const char * const keep[] = {
++        "apexd", "vold", "bpf", "netbpfload", "error", "Error", "ERROR", "fail", "Fail", "FAIL",
++        "missing", "abort", "Abort", "FATAL", "fatal", "crash", "reboot", "Reboot", "exited with status",
++        "killed by signal", "CANNOT LINK", "not found", "No such", "denied", "timeout", "Timed out",
++        "powerctl", "keystore", "linker", "panic", "Unable",
++    };
++    unsigned i;
++    for (i = 0; i < ARRAY_SIZE(keep); i++)
++        if (strstr(l, keep[i]))
++            return true;
++    return false;
++}
++
++static bool hx_log_is_noise(const char *l)
++{
++    if (!hx_log_is_interesting(l))
++        return true;
++    if (strstr(l, "avc:  denied") || strstr(l, "avc: denied"))
++        return true;
++    {
++    static const char * const noise[] = {
++        "libprocessgroup", "Shutdown service", "Sending signal", "received signal 15",
++        "Received control message after shutdown", "procs: No such file", "Still waiting on process",
++        "Unable to remove cgroup", "Removed cgroup", "Found pre-installed", "Scanning /", "does not exist. Skipping", "Parsing file",
++    };
++    unsigned i;
++    for (i = 0; i < ARRAY_SIZE(noise); i++)
++        if (strstr(l, noise[i]))
++            return true;
++    }
++    return false;
++}
++
++#define HX_PAGE_LINES 45
++#define HX_PAGE_DELAY_MS 12000
++
++/*
++ * Replay the kernel log (from userspace start, minus shutdown noise) on the console in pages,
++ * so a frozen phone can be photographed page by page. Counts lines first because printing
++ * appends to the very buffer being read.
++ */
++static void hx_reboot_log_pages(void)
++{
++    static char line[256];
++    struct kmsg_dumper d = { .active = true };
++    size_t len;
++    unsigned long total = 0, idx, shown, page, pages, start = 0, n;
++
++    kmsg_dump_rewind(&d);
++    while (kmsg_dump_get_line(&d, false, line, sizeof(line) - 1, &len)) {
++        line[len] = 0;
++        if (!start && strstr(line, "Run /init as init process"))
++            start = total;
++        total++;
++    }
++
++    /* count kept lines to know the number of pages */
++    kmsg_dump_rewind(&d);
++    for (idx = 0, n = 0; idx < total && kmsg_dump_get_line(&d, false, line, sizeof(line) - 1, &len); idx++) {
++        line[len] = 0;
++        if (idx >= start && !hx_log_is_noise(line))
++            n++;
++    }
++    pages = (n + HX_PAGE_LINES - 1) / HX_PAGE_LINES;
++
++    for (;;) {
++        for (page = 0; page < pages; page++) {
++            unsigned i;
++            for (i = 0; i < 90; i++)
++                printk(KERN_EMERG "\n");
++            pr_emerg("===== LOG PAGE %lu/%lu (photo each page, next in %us) =====\n",
++                     page + 1, pages, HX_PAGE_DELAY_MS / 1000);
++            kmsg_dump_rewind(&d);
++            for (idx = 0, shown = 0; idx < total && kmsg_dump_get_line(&d, false, line, sizeof(line) - 1, &len); idx++) {
++                line[len] = 0;
++                if (idx < start || hx_log_is_noise(line))
++                    continue;
++                if (shown >= page * HX_PAGE_LINES && shown < (page + 1) * HX_PAGE_LINES) {
++                    if (len && line[len - 1] == '\n')
++                        line[len - 1] = 0;
++                    printk(KERN_EMERG "%.150s\n", line);
++                }
++                shown++;
++            }
++            mdelay(HX_PAGE_DELAY_MS);
++        }
++        for (page = 0; page < 90; page++)
++            printk(KERN_EMERG "\n");
++        pr_emerg("===== END OF LOG (%lu pages). Replaying from page 1 in 20s =====\n", pages);
++        mdelay(20000);
++    }
++}
++
++static void hx_reboot_freeze(const char *what)
++{
++    pr_emerg("hx-reboot: %s BLOCKED (noreboot=1). Log replay starts in 15s.\n", what);
++    dump_stack();
++    mdelay(15000);
++    hx_reboot_log_pages(); /* never returns; restart path runs with IRQs off, so busy-wait */
++}
++
+ static int hx_reboot_restart(struct notifier_block *this, unsigned long mode, void *cmd)
+ {
++    if (noreboot)
++        hx_reboot_freeze("restart");
+     if(!hx_reboot)
+         return NOTIFY_DONE;
+ 
+@@ -58,6 +171,8 @@ static int hx_reboot_restart(struct notifier_block *this, unsigned long mode, vo
+ 
+ static void hx_reboot_poweroff(void)
+ {
++    if (noreboot)
++        hx_reboot_freeze("power-off");
+     int ret;
+     u8 data;
+     unsigned idx;
+diff --git a/kernel/bpf/cgroup.c b/kernel/bpf/cgroup.c
+index 8bd69062f..b33fc0627 100644
+--- a/kernel/bpf/cgroup.c
++++ b/kernel/bpf/cgroup.c
+@@ -1040,12 +1040,18 @@ int __cgroup_bpf_run_filter_setsockopt(struct sock *sk, int *level,
+ 		/* export any potential modifications */
+ 		*level = ctx.level;
+ 		*optname = ctx.optname;
+-		*optlen = ctx.optlen;
+-		*kernel_optval = ctx.optval;
++		/*
++		 * sandcastle (backport of upstream d8fe449a9c51): optlen == 0 from BPF means
++		 * "use the original userspace data". Android 16 netd sets it on every call.
++		 */
++		if (ctx.optlen != 0) {
++			*optlen = ctx.optlen;
++			*kernel_optval = ctx.optval;
++		}
+ 	}
+ 
+ out:
+-	if (ret)
++	if (ret || ctx.optlen == 0)
+ 		sockopt_free_buf(&ctx);
+ 	return ret;
+ }
+@@ -1124,10 +1130,13 @@ int __cgroup_bpf_run_filter_getsockopt(struct sock *sk, int level,
+ 		goto out;
+ 	}
+ 
+-	if (copy_to_user(optval, ctx.optval, ctx.optlen) ||
+-	    put_user(ctx.optlen, optlen)) {
+-		ret = -EFAULT;
+-		goto out;
++	/* sandcastle (upstream d8fe449a9c51): optlen == 0 keeps the kernel-produced reply */
++	if (ctx.optlen != 0) {
++		if (copy_to_user(optval, ctx.optval, ctx.optlen) ||
++		    put_user(ctx.optlen, optlen)) {
++			ret = -EFAULT;
++			goto out;
++		}
+ 	}
+ 
+ 	ret = ctx.retval;

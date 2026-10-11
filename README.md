@@ -1,0 +1,127 @@
+# iDroidik — Android on iPhone 7
+
+Run a real **Android 16** on an **iPhone 7** (iOS 15), on top of the
+[Project Sandcastle](https://github.com/corellium/projectsandcastle) Linux kernel.
+Not a theme, not an emulator — a real Android desktop with working touchscreen,
+Wi-Fi and internet (software-rendered, so usable but not fast). Your iPhone stays a
+normal iPhone: iOS boots as usual; Android is loaded from your Mac each time. The
+Pixel-style launcher and persistent storage are optional extra steps, not the
+default — see below.
+
+> ⚠️ **Status: usable but tethered, and not fully hands-off yet.** It boots to a
+> working UI. It has **no audio, camera, cellular, Bluetooth or GPU acceleration**,
+> and it must be booted from a Mac each time. See [`docs/STATE.md`](docs/STATE.md)
+> for the exact works / doesn't-work list, and [`ROADMAP.md`](ROADMAP.md) for
+> what's left before it's a clean, one-command, legal public release.
+
+<p align="center"><img src="pixel/preview.png" width="280" alt="Pixel-style Android on iPhone 7"></p>
+
+Hand-built on real hardware, not a tutorial reskin — the hard-won kernel/boot fixes (why gcc 9
+reboots the phone after ~45 s, the cgroup-bpf backport that stops `netd` crash-looping, 16 KB-page
+VNDK, capex→apex, the hand-written audio-HAL stub) are written up in
+[`docs/TECHNICAL-NOTES.md`](docs/TECHNICAL-NOTES.md). The name **iDroidik** is a nod to the original
+iDroid/openiBoot (2010–2012); this is an independent, unrelated project.
+
+## Easiest: set it up with an AI 🤖
+
+Don't want to run commands yourself? Clone the repo, open it in an AI coding agent
+(e.g. Claude Code) on your Mac, connect your iPhone 7 **directly** (no USB hub), and
+paste the prompt from **[`SETUP-WITH-AI.md`](SETUP-WITH-AI.md)**. The agent installs the
+tools, walks you through the DFU button steps, generates the firmware from your own iOS,
+and boots Android — you just do the physical bits it asks for.
+
+> Note: the ~3 GB Android image **and the boot binaries** (kernel, initrd, Pongo, vulkan
+> driver) aren't hosted for download yet — you must build/obtain them and place them in the
+> repo first (see [`MANIFEST.md`](MANIFEST.md)); the agent will stop and tell you what's missing.
+
+Prefer to do it by hand? Use the quick start below.
+
+## What you need
+
+- An **iPhone 7** (model `iPhone9,3`/`iPhone9,1`) on **iOS 15.x**, checkm8-capable.
+  This is destructive-adjacent low-level work — a spare phone is strongly advised.
+  **Never restore the phone** (that can wipe it; setup only adds a volume).
+- A **Mac** with a USB cable. **Apple Silicon only** in practice — the prebuilt pongo loaders
+  (`loader/pongo-*`) are arm64 and link against Homebrew `libusb`; an Intel Mac would need them rebuilt.
+- **macOS only.** Windows is not supported (palera1n has no Windows build); Linux hosts would need the loaders rebuilt and the scripts ported.
+- Tools: `install.sh` auto-installs [`palera1n`](https://palera.in), `sshpass`, `adb` and
+  `libusb` (`sshpass`/`adb`/`libusb` via [Homebrew](https://brew.sh));
+  [`colima`](https://github.com/abiosoft/colima) is only needed if you build from source.
+
+## Quick start
+
+```bash
+git clone https://github.com/Aisamo-fi/iDroidik.git && cd iDroidik
+cp config.env.example config.env      # set IOS_IP (your jailbroken iPhone's SSH IP)
+./install.sh                          # auto-installs palera1n + sshpass + adb; fetches image if hosted
+./setup-device.sh                     # FIRST TIME ONLY: create the Android volume + firmware
+./android.sh                          # exploit → boot Android (follow the DFU prompts)
+./tools/fetch-apks.sh                 # download the FOSS apps (Lawnchair, Lawnicons, F-Droid…)
+./pixelify.sh                         # make it look/act like Pixel + install those apps
+```
+
+- `./setup-device.sh` is the one-time, **experimental** first-time bring-up (creates the
+  "Android" APFS volume on the phone, copies the firmware-free image, and generates the
+  touch + Wi-Fi firmware from your own iOS). After it, just use `./android.sh` to boot.
+- The shipped image is **plain Android (GSI)** — the Pixel look and apps are **not** baked in.
+  `./tools/fetch-apks.sh` + `./pixelify.sh` reproduce the Pixel-style setup (Lawnchair + Lawnicons,
+  dark mode, circle icons, wallpaper) and install the FOSS apps. Proprietary apps (TikTok, etc.)
+  you install yourself from Aurora Store afterwards. (Your personal data is never shipped.)
+- **Not shipped in git:** the ~3 GB Android image **and the boot binaries** (kernel, initrd,
+  Pongo, vulkan driver). `install.sh` can auto-fetch only the **image** (and only once a
+  download URL is set — not yet); the **boot binaries you build/obtain yourself** (see
+  [`MANIFEST.md`](MANIFEST.md) / [`docs/BUILD.md`](docs/BUILD.md)). `install.sh` stops and lists
+  whatever is missing — a plain `git clone` will not boot until all of it is in place.
+- Apple firmware is **never redistributed** — it is generated on your device from your own
+  iOS (see [`docs/FIRMWARE-AND-LEGAL.md`](docs/FIRMWARE-AND-LEGAL.md)).
+
+## `android.sh` commands
+
+| Command | What it does |
+|---------|--------------|
+| `./android.sh` | boot Android and apply performance/thermal tuning (default) |
+| `./android.sh deploy` | write a rebuilt image to the phone, then boot it |
+| `./android.sh save` | copy Android `/data` back to the Mac |
+| `./android.sh restore` | restore saved `/data` into a running Android |
+| `./android.sh tune` | re-apply tuning to a running Android |
+| `./android.sh linux` | boot the Sandcastle **Linux** build instead |
+
+> ⚠️ After `./android.sh deploy`, the phone is left set to stay in **Recovery** between boots
+> (needed for the tethered Android boot). That is normal — to go back to normal iOS run
+> `~/.local/bin/palera1n -n`. **Do not** "Restore" the phone in Finder (that erases it).
+
+## How it works (short version)
+
+checkm8 (via palera1n) → PongoOS → Sandcastle Linux 5.4 kernel → Android 16 GSI.
+The Android partitions live in a `nand` image file on a dedicated APFS volume inside
+the iPhone. Full details in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+## Legality
+
+This project **never distributes Apple firmware**. The touch/Wi-Fi/Bluetooth
+firmware is extracted on *your* device from *your* iOS, the way Project Sandcastle
+does it. See [`docs/FIRMWARE-AND-LEGAL.md`](docs/FIRMWARE-AND-LEGAL.md). Everything
+original here is MIT ([`LICENSE`](LICENSE)); third-party components keep their own
+licenses ([`NOTICE`](NOTICE)).
+
+## Documentation
+
+- [`docs/STATE.md`](docs/STATE.md) — what works / what doesn't, and hard constraints
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the boot chain and image layout
+- [`docs/TECHNICAL-NOTES.md`](docs/TECHNICAL-NOTES.md) — the non-obvious fixes
+- [`docs/BUILD.md`](docs/BUILD.md) — building the kernel / loaders / GPU driver
+- [`docs/FIRMWARE-AND-LEGAL.md`](docs/FIRMWARE-AND-LEGAL.md) — firmware & legality
+- [`MANIFEST.md`](MANIFEST.md) — where the large binaries come from
+- [`ROADMAP.md`](ROADMAP.md) — prioritized open tasks
+- [`AGENTS.md`](AGENTS.md) — orientation for an AI agent (or human) continuing this
+
+## Continuing development
+
+This project is set up to be picked up by an AI coding agent as much as by a human.
+If that's you (or your agent), start with **[`AGENTS.md`](AGENTS.md)**, then
+`docs/STATE.md` and `ROADMAP.md`.
+
+## Credits
+
+Built on Project Sandcastle (Corellium), PongoOS (checkra1n), palera1n, SwiftShader
+(Google), and TrebleDroid / AOSP. See [`NOTICE`](NOTICE).

@@ -1,0 +1,75 @@
+iDroidik — Android on iPhone 7 — third-party components and attribution
+=====================================================================
+
+This project is a thin orchestration + patch layer on top of other people's
+hard work. It bundles or builds on the following, each under its OWN license
+(which governs those files — the project's own MIT license at the bottom does
+NOT override them). If you redistribute this project, keep this NOTICE.
+
+Project Sandcastle / linux-sandcastle (Corellium)  —  GPL-2.0
+  Android/Linux for the iPhone; the 5.4 kernel, loaders, touch daemon (hx-touchd),
+  syscfg/hcd extraction tools, and the AOSP build diff.
+  Source: https://github.com/corellium/projectsandcastle
+          https://github.com/corellium/linux-sandcastle  (kernel — GPL-2.0; full
+          source is the linux-sandcastle tree, not vendored here)
+          https://github.com/corellium/sandcastle-buildroot
+  Vendored here under: psc/, linux/, android-sandcastle/, loader/ (modified).
+  License: GPL-2.0 — see psc/LICENSE. The loaders in loader/ (pongo-bootr,
+  pongo-linux, pongo-shell) are derived from Corellium's load-linux.c.
+  GPL-2.0 corresponding source for the built kernel (work/Image-a16f.lzma):
+    base   = corellium/linux-sandcastle @ commit 0c2f7dda13d67bb7e06123df516f8bdb1000a79b
+             (Linux 5.4.14)
+    patch  = kernel-patches/idroidik-linux-sandcastle-5.4.14.patch (our changes to
+             binder.c, kernel/bpf/cgroup.c, drivers/power/reset/hx-reboot.c)
+    config = work/android16-kernel.config ; toolchain = gcc 7.5 (kbuild7/Dockerfile)
+  Clone the base at that commit, `git apply` the patch, build with that config — see
+  docs/BUILD.md. If you redistribute the kernel binary, ship these alongside it.
+
+mxml (Michael R Sweet)  —  Apache-2.0 (with static-linking exception)
+  XML parser bundled inside the touch daemon.
+  Vendored here under: psc/hx-touchd/mxml-3.1/
+  Source: https://github.com/michaelrsweet/mxml
+
+libimobiledevice (iproxy, libplist, libusbmuxd)  —  LGPL-2.1
+  USB/lockdown helpers shipped with the original Sandcastle macOS tooling.
+  Vendored here under: android-sandcastle/iproxy, android-sandcastle/libplist.3.dylib,
+  android-sandcastle/libusbmuxd.4.dylib
+  Source: https://github.com/libimobiledevice
+
+PongoOS (checkra1n team)  —  MIT
+  Pre-boot execution environment used to load the kernel over checkm8.
+  Source: https://github.com/checkra1n/PongoOS
+  Vendored here under: pongo/  (License: MIT — see pongo/LICENSE.md)
+
+palera1n
+  checkm8 jailbreak / boot tool used to run the exploit and enter pongoOS.
+  https://palera.in — NOT redistributed here; the user installs it themselves.
+
+SwiftShader (Google)  —  Apache-2.0
+  CPU implementation of Vulkan; built into the vulkan.pastel.so software GPU
+  driver this project ships as a build recipe (docs/BUILD.md).
+  Source: https://github.com/google/swiftshader
+
+TrebleDroid GSI / Android Open Source Project (Google + TrebleDroid)  —  Apache-2.0
+  The Android 16 system image (GSI) that runs on top of the kernel.
+  https://github.com/TrebleDroid/treble_experimentations
+  NOT redistributed in this git repo; fetched/built per MANIFEST.md.
+
+Apple Inc. firmware (touch, Wi-Fi, Bluetooth, syscfg)
+  REQUIRED at runtime but NEVER redistributed by this project. It is extracted
+  on the user's own device from their own licensed iOS. See
+  docs/FIRMWARE-AND-LEGAL.md.
+
+The name "iDroidik" is used in homage to the original iDroid / openiBoot project
+(2010–2012, Android on the early iPhones); this is an independent, unrelated effort.
+
+--------------------------------------------------------------------------------
+Original work in THIS project (MIT, see LICENSE) — these files only:
+  android.sh, boot*.sh, wait-and-load.sh, setup-device.sh, pixelify.sh, install.sh,
+  config.env.example,
+  tools/ (split-image.sh, join-image.sh, fetch-apks.sh, gen-firmware.sh, lpsuper.py,
+          *-phone-nand.sh, sotest.c),
+  patch-vulkan/ (sc-render.sh, sc-thermal.sh, sc-cpucap.sh, sc-sandcastle.rc, apply.sh),
+  work/ configs + effstub/ + userdata/ sources,
+  docs/, assets/lawnchair-appearance.preferences_pb, and this NOTICE.
+Everything NOT listed here belongs to its upstream above and keeps that license.

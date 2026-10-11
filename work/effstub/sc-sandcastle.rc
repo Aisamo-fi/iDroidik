@@ -1,0 +1,28 @@
+# Sandcastle A16 fixes for the A10 vendor
+
+# A10 init.ranchu.rc wpa_supplicant has no 'user' → dropped by A16 init; A16 wifi starts it by interface.
+service sc_wpa_supplicant /vendor/bin/hw/wpa_supplicant -Dnl80211 -iwlan0 -c/vendor/etc/wifi/wpa_supplicant.conf -O/data/vendor/wifi/wpa/sockets -g@android:wpa_wlan0
+    interface android.hardware.wifi.supplicant@1.0::ISupplicant default
+    interface android.hardware.wifi.supplicant@1.1::ISupplicant default
+    interface android.hardware.wifi.supplicant@1.2::ISupplicant default
+    socket wpa_wlan0 dgram 660 wifi wifi
+    user root
+    group system wifi inet keystore
+    disabled
+    oneshot
+
+# 2 GB RAM and /data in tmpfs: zram swap. Kernel has no lz4 backend (fstab default), use lzo-rle.
+on property:sys.boot_completed=1
+    write /sys/block/zram0/comp_algorithm lzo-rle
+    write /sys/block/zram0/disksize 1258291200
+    exec u:r:su:s0 root root -- /system/bin/mkswap /dev/block/zram0
+    exec u:r:su:s0 root root -- /system/bin/swapon /dev/block/zram0
+    write /proc/sys/vm/swappiness 100
+    stop sc_kmsglog
+    # kernel suspend (s2idle) resume is untested on this hardware: keep the kernel awake, the screen still turns off.
+    # Remove this line to test real suspend once the power button is confirmed to wake the phone.
+    write /sys/power/wake_lock sandcastle_nosuspend
+
+# Persistent /data (userdata.img on the Android APFS volume, raw-mapped); falls back to tmpfs on any doubt.
+on post-fs
+    exec u:r:su:s0 root root -- /system/bin/sh /system/bin/sc-userdata.sh

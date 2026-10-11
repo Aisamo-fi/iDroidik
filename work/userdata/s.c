@@ -1,0 +1,17 @@
+void __libc_init(void){}
+void open(void){}
+void close(void){}
+void pread64(void){}
+void pwrite64(void){}
+void malloc(void){}
+void calloc(void){}
+void free(void){}
+void memcmp(void){}
+void memcpy(void){}
+void dprintf(void){}
+void strtoul(void){}
+void fsync(void){}
+void exit(void){}
+void strcmp(void){}
+void qsort(void){}
+void getenv(void){}

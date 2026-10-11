@@ -1,0 +1,63 @@
+#!/binpack/bin/sh
+
+/binpack/usr/local/bin/wget http://google.com -O /dev/null > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "Please make sure you are connected to wifi and try again"
+    exit 1;
+fi
+
+DISK=0
+DISKS=`ls /dev/disk0s1s*`
+
+for i in ${DISKS}
+do
+	LABEL=`/System/Library/Filesystems/apfs.fs/apfs.util -p $i`
+	if [ "${LABEL}" == "Android" ]; then
+	    DISK=$i
+	    break;
+        fi
+done
+if [ ! -b ${DISK} ]; then
+	newfs_apfs -A -v Android -e /dev/disk0s1
+fi
+
+DISK=
+DISKS=`ls /dev/disk0s1s*`
+
+for i in ${DISKS}
+do
+	LABEL=`/System/Library/Filesystems/apfs.fs/apfs.util -p $i`
+	if [ "${LABEL}" == "Android" ]; then
+	    DISK=$i
+	    break;
+        fi
+done
+if [ -b ${DISK} ]; then 
+	mkdir -p /tmp/mnt
+	echo "Mounting ${DISK}"
+	mount -t apfs ${DISK} /tmp/mnt 
+	if [ $? -ne 0 ]; then
+            echo "failed to mount disk";
+  	    exit 1
+        fi
+	rm -rf /tmp/mnt/nand*
+	echo "Starting to download nand. This will take a few minutes"
+	/binpack/usr/local/bin/wget https://assets.checkra.in/downloads/sandcastle/86cbdbab7888f6ef8e8c43e22d43f6eec406554ec8266f3fecd764e6a4ee1ba1/nand.gz -O /tmp/mnt/nand.gz > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+		echo "Failed to download nand. Are you connected to wifi?"
+	        umount /tmp/mnt
+		exit 1;
+	fi
+	echo "Decompressing nand image"
+	/binpack/usr/bin/gunzip -d /tmp/mnt/nand.gz > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+                echo "Failed to decompress nand. Wifi disconnected?"
+                umount /tmp/mnt
+                exit 1;
+        fi
+	sync
+	umount /tmp/mnt
+else
+	echo "There was an error"
+	exit 1
+fi

@@ -1,0 +1,7 @@
+# Sandcastle: empty AIDL audio effects factory; Android 16 audioserver aborts without one
+service sc.audio-effect /system/bin/sc_effstub
+    class hal
+    user audioserver
+    group audio
+    seclabel u:r:audioserver:s0
+    interface aidl android.hardware.audio.effect.IFactory/default

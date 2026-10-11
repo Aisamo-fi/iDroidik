@@ -1,0 +1,56 @@
+#!/bin/bash -x
+#
+#  Copyright (C) 2019-2021 checkra1n team
+#  This file is part of pongoOS.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+# 
+
+TOOLCHAIN=/opt/ios-arm64e-clang-toolchain
+REALNAME="$(realpath "$0")"
+DIR="$(dirname "${REALNAME}")"
+BASENAME="$(basename "${REALNAME}")"
+TARGET="${BASENAME%-*}"
+EXE="${BASENAME##*-}"
+ARCH="${TARGET%%-*}"
+export SDKROOT="$TOOLCHAIN/sdks/MacOSX.sdk"
+export PATH="${TOOLCHAIN}/bin:$PATH"
+TOOL="clang"
+case $EXE in
+clang++|g++|c++)
+    TOOL="clang++" # -isystem $TOOLCHAIN/libc++/include/c++/v1"
+    ;;
+as)
+#    TOOL="as"
+esac
+case $ARCH in
+x86_64|x86_64h)
+    export SDKROOT="$TOOLCHAIN/sdks/MacOSX.sdk"
+    #LINKER="-Xlinker $TOOLCHAIN/clangrt/lib/darwin/libclang_rt.osx.a"
+    ;;
+i386)
+    #LINKER="-Xlinker $TOOLCHAIN/clangrt/lib/darwin/libclang_rt.osx.a
+        export SDKROOT="$TOOLCHAIN/sdks/MacOSX.sdk"
+    ;;
+arm64)
+    #LINKER="-Xlinker $TOOLCHAIN/clangrt/lib/darwin/libclang_rt.ios.a
+    export SDKROOT="$TOOLCHAIN/sdks/iPhoneOS.sdk"
+    ;;
+esac
+"${TOOLCHAIN}/bin/${EXE}" -Wno-unused-command-line-argument -fuse-ld="${TOOLCHAIN}/bin/ld" -isysroot "${SDKROOT}" -target $TARGET $LINKER "$@"

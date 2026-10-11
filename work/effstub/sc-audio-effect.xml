@@ -1,0 +1,13 @@
+<manifest version="9.0" type="framework">
+    <hal format="aidl">
+        <name>android.hardware.audio.effect</name>
+        <version>3</version>
+        <fqname>IFactory/default</fqname>
+    </hal>
+    <!-- A10 vendor declares only thermal@2.0; A16 hwservicemanager refuses to register it without the @1.0 superclass -->
+    <hal format="hidl">
+        <name>android.hardware.thermal</name>
+        <transport>hwbinder</transport>
+        <fqname>@1.0::IThermal/default</fqname>
+    </hal>
+</manifest>

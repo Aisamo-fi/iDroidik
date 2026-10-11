@@ -1,0 +1,35 @@
+# --- personal configuration (never commit) ---
+config.env
+
+# --- large binary artifacts (fetch/build per MANIFEST.md, not stored in git) ---
+# Android system image and its split parts
+nand
+nand-*
+nand.gz
+*.nandpart
+nandparts/
+# kernels, ramdisks, disk images
+*.lzma
+*.cpio
+*.cpio.gz
+*.Image
+work/Android.Image
+# prebuilt loaders / pongo blobs / apks / shared objects
+*.bin
+*.apk
+*.so
+*.dmg
+*.tar
+*.tar.gz
+# your saved Android /data and captures
+data/
+logs/
+photos/
+
+# --- OS / editor cruft ---
+.DS_Store
+*.swp
+*.o
+
+# device-specific userdata nonce (regenerated per device)
+userdata-a16.conf
