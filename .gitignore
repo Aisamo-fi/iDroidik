@@ -33,3 +33,7 @@ photos/
 
 # device-specific userdata nonce (regenerated per device)
 userdata-a16.conf
+
+# Python bytecode cache
+__pycache__/
+*.pyc

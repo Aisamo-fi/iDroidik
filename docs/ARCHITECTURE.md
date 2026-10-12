@@ -49,6 +49,8 @@ Android's `/data` would be tmpfs (wiped every boot). Instead a `userdata.img` fi
 on the iPhone is **raw-mapped**: at boot Android scans raw `nvme0n1p1`, builds an
 extent map for the file, sets up a `dm-linear` device over it, and mounts ext4 over
 tmpfs `/data`. Guarded by nonce/header checks; any doubt → falls back to tmpfs.
+The `userdata.img` is created by `setup-device.sh` at first-time setup by default (it falls back
+to RAM if the phone is low on space, or with `NO_PERSIST=1`), or by `./android.sh deploy`.
 Sources: `work/userdata/` (`scdata.c`, `sc-userdata.sh`).
 
 ## Graphics

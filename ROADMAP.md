@@ -9,7 +9,9 @@ P2 = nice to have.
 
 ---
 
-## T0 — Reconcile the Android image (P0, no phone needed)
+## T0 — Reconcile the Android image (P0, no phone needed) — ✅ DONE
+**Status (2026-10-12): done.** Canonical `nand-a16` sha = `437cf287…`, pinned in `install.sh`
+and hosted on the v0.1-exp release; a from-scratch install was validated end-to-end.
 **Goal:** make one canonical `nand-a16` whose sha256 matches `nand-a16.sha256`.
 **Why:** the deployed phone image (`437cf287…`) and the local working image may
 have diverged (later patches in memory were "not yet deployed"). A release must
@@ -41,7 +43,9 @@ per Sandcastle A10); `psc/hx-touchd`, `psc/hcdpack`, `psc/syscfg`; a new
 `*.hcd`, or syscfg data; a fresh install regenerates them on-device and touch +
 Wi-Fi still work.
 
-## T2 — Host ALL binaries + one-command flasher (P0)
+## T2 — Host ALL binaries + one-command flasher (P0) — ✅ DONE
+**Status (2026-10-12): done.** The image (split into 2 parts) and all four boot blobs are on the
+v0.1-exp release; `install.sh` fetches + sha-verifies every one and reassembles the image atomically.
 **Goal:** users get everything needed to boot without it living in git — the
 (firmware-free) ~3 GB image **and the four boot binaries** (`work/Image-a16f.lzma`,
 `work/debug-initrd.cpio.gz`, `pongo-rel/Pongo-2.6.1.bin`, `patch-vulkan/vulkan.pastel.so`).

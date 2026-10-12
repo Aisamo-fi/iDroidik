@@ -15,13 +15,20 @@ echo "verifying parts…"
 ( cd "$DIR" && shasum -a 256 -c "$BASE.parts.sha256" )
 
 echo "joining → $OUT…"
-# deterministic: always write to $OUT (as given); parts are read from $DIR
-cat "$DIR/$BASE".part* > "$OUT"
+# ATOMIC: assemble into a temp file and rename to $OUT only after the whole-image sha
+# verifies. A failed or interrupted join (ENOSPC, Ctrl-C) then leaves NO $OUT, so a re-run
+# re-downloads/re-joins instead of mistaking a truncated file for "already present".
+TMP="$OUT.join.$$"
+trap 'rm -f "$TMP"' EXIT
+cat "$DIR/$BASE".part* > "$TMP"
 
 if [ -f "$DIR/$BASE.whole.sha256" ]; then
   echo "verifying whole image…"
   want=$(cut -d' ' -f1 "$DIR/$BASE.whole.sha256")
-  got=$(shasum -a 256 "$OUT" | cut -d' ' -f1)
-  [ "$want" = "$got" ] && echo "✓ image OK ($got)" || { echo "✗ whole-image sha mismatch" >&2; exit 1; }
+  got=$(shasum -a 256 "$TMP" | cut -d' ' -f1)
+  [ "$want" = "$got" ] || { echo "✗ whole-image sha mismatch" >&2; exit 1; }
+  echo "✓ image OK ($got)"
 fi
+mv -f "$TMP" "$OUT"
+trap - EXIT
 echo "done → $OUT"

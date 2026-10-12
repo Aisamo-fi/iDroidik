@@ -1,11 +1,11 @@
 #!/bin/bash
 # One-command setup for Android on iPhone 7.
 #
-# It installs host prerequisites, fetches the Android system image (only if a download URL is
-# configured) and reassembles it, then hands off to ./setup-device.sh / ./android.sh.
-# It does NOT fetch the kernel/initrd/pongo/vulkan boot blobs — build or obtain those per
-# MANIFEST.md and place them in the repo. Fill IMAGE_BASE_URL below (MANIFEST.md / ROADMAP T2)
-# before the image can auto-download; until then this stops cleanly with instructions.
+# It installs host prerequisites, fetches the Android system image (split) AND the kernel / initrd /
+# pongo / vulkan boot blobs from the GitHub release (IMAGE_BASE_URL below), verifying each against a
+# pinned sha256 and reassembling the image, then hands off to ./setup-device.sh / ./android.sh.
+# If a download fails or a checksum does not match, it stops cleanly. To build from source instead,
+# see MANIFEST.md / docs/BUILD.md.
 #
 # It never restores or erases your iPhone. iOS keeps working (palera1n -n).
 set -u
@@ -81,7 +81,18 @@ need openssl   "part of macOS / brew install openssl"
 [ "$step_missing" = 0 ] && ok "host tools present" || warn "install the tools above, then re-run"
 
 # 3. fetch the Android image (per MANIFEST.md)
+# Downloading the parts (~3.3 GB) and reassembling them needs ~6.5 GB free transiently on the Mac.
+free_mb=$(df -m . 2>/dev/null | awk 'NR==2{print $4}')
+case "$free_mb" in ''|*[!0-9]*) : ;; *) [ "$free_mb" -lt 7000 ] && warn "low disk on the Mac (~${free_mb} MB free) — downloading + joining the image needs ~6.5 GB; free space first or the join may fail." ;; esac
 fetched=0
+# Drop a stale/partial leftover: trust an existing reassembled image only when it still matches
+# the downloaded parts' whole.sha256 (when we have it). A genuine self-built image has no
+# nandparts/whole.sha256 and is pin-checked below instead.
+if [ -f "$IMAGE_BASE_NAME" ] && [ -f "nandparts/$IMAGE_BASE_NAME.whole.sha256" ] \
+   && [ "$(shasum -a 256 "$IMAGE_BASE_NAME" | cut -d' ' -f1)" != "$(cut -d' ' -f1 "nandparts/$IMAGE_BASE_NAME.whole.sha256")" ]; then
+  warn "existing $IMAGE_BASE_NAME doesn't match the downloaded parts — discarding and re-joining"
+  rm -f "$IMAGE_BASE_NAME"
+fi
 if [ -f "$IMAGE_BASE_NAME" ]; then
   ok "$IMAGE_BASE_NAME already present"
 elif [ -n "$IMAGE_BASE_URL" ]; then
@@ -90,11 +101,15 @@ elif [ -n "$IMAGE_BASE_URL" ]; then
   mkdir -p nandparts
   curl -fsSL "$IMAGE_BASE_URL/$IMAGE_BASE_NAME.parts.sha256" -o "nandparts/$IMAGE_BASE_NAME.parts.sha256" \
     || die "could not fetch the parts manifest from $IMAGE_BASE_URL"
-  while read -r _ part; do
+  while read -r psha part; do
     [ -n "$part" ] || continue
     # only accept a bare filename from the manifest (no path traversal)
     case "$part" in */*|*..*) die "refusing suspicious part name in manifest: $part" ;; esac
-    [ -f "nandparts/$part" ] && continue
+    if [ -f "nandparts/$part" ]; then
+      # keep an existing part only if it already matches its manifest sha; else re-fetch it
+      [ "$(shasum -a 256 "nandparts/$part" | cut -d' ' -f1)" = "$psha" ] && continue
+      warn "re-downloading corrupt/partial part: $part"; rm -f "nandparts/$part"
+    fi
     echo "  $part"
     curl -fSL "$IMAGE_BASE_URL/$part" -o "nandparts/$part" || die "download failed: $part"
   done < "nandparts/$IMAGE_BASE_NAME.parts.sha256"

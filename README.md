@@ -4,9 +4,9 @@ Run a real **Android 16** on an **iPhone 7** (iOS 15), on top of the
 [Project Sandcastle](https://github.com/corellium/projectsandcastle) Linux kernel.
 Not a theme, not an emulator — a real Android desktop with working touchscreen,
 Wi-Fi and internet (software-rendered, so usable but not fast). Your iPhone stays a
-normal iPhone: iOS boots as usual; Android is loaded from your Mac each time. The
-Pixel-style launcher and persistent storage are optional extra steps, not the
-default — see below.
+normal iPhone: iOS boots as usual; Android is loaded from your Mac each time.
+Persistent storage (so apps and settings survive reboots) is set up by default during
+first-time setup; the Pixel-style launcher is an optional extra step — see below.
 
 > ⚠️ **Status: usable but tethered, and not fully hands-off yet.** It boots to a
 > working UI. It has **no audio, camera, cellular, Bluetooth or GPU acceleration**,
@@ -31,8 +31,8 @@ tools, walks you through the DFU button steps, generates the firmware from your 
 and boots Android — you just do the physical bits it asks for.
 
 > Note: the ~3 GB Android image **and the boot binaries** (kernel, initrd, Pongo, vulkan
-> driver) aren't hosted for download yet — you must build/obtain them and place them in the
-> repo first (see [`MANIFEST.md`](MANIFEST.md)); the agent will stop and tell you what's missing.
+> driver) are hosted on the `v0.1-exp` GitHub release; `install.sh` fetches them and verifies
+> each against a pinned sha256. (To build from source instead, see [`MANIFEST.md`](MANIFEST.md).)
 
 Prefer to do it by hand? Use the quick start below.
 
@@ -50,10 +50,20 @@ Prefer to do it by hand? Use the quick start below.
 
 ## Quick start
 
+**Prerequisite (one-time):** your iPhone 7 must be on **rootful** jailbroken iOS 15 with
+**OpenSSH** running (root password `alpine`) and reachable over SSH — set that up with
+[palera1n](https://palera.in) (rootful; the first run creates the fakefs and installs the
+bootstrap/SSH). Everything below drives the phone over that SSH connection, so confirm
+`ssh root@<iPhone>` works before running `setup-device.sh`.
+
+> Free space: the rootful **fakefs**, the ~3 GB Android image and the ~6 GB persistent
+> `userdata.img` all share the iPhone's single APFS container with iOS. Keep **~10 GB+ free in
+> iOS** (setup refuses to overflow it; with less, persistence falls back to a RAM `/data`).
+
 ```bash
 git clone https://github.com/Aisamo-fi/iDroidik.git && cd iDroidik
 cp config.env.example config.env      # set IOS_IP (your jailbroken iPhone's SSH IP)
-./install.sh                          # auto-installs palera1n + sshpass + adb; fetches image if hosted
+./install.sh                          # auto-installs palera1n + sshpass + adb; fetches & verifies image + boot blobs
 ./setup-device.sh                     # FIRST TIME ONLY: create the Android volume + firmware
 ./android.sh                          # exploit → boot Android (follow the DFU prompts)
 ./tools/fetch-apks.sh                 # download the FOSS apps (Lawnchair, Lawnicons, F-Droid…)
@@ -67,11 +77,11 @@ cp config.env.example config.env      # set IOS_IP (your jailbroken iPhone's SSH
   `./tools/fetch-apks.sh` + `./pixelify.sh` reproduce the Pixel-style setup (Lawnchair + Lawnicons,
   dark mode, circle icons, wallpaper) and install the FOSS apps. Proprietary apps (TikTok, etc.)
   you install yourself from Aurora Store afterwards. (Your personal data is never shipped.)
-- **Not shipped in git:** the ~3 GB Android image **and the boot binaries** (kernel, initrd,
-  Pongo, vulkan driver). `install.sh` can auto-fetch only the **image** (and only once a
-  download URL is set — not yet); the **boot binaries you build/obtain yourself** (see
-  [`MANIFEST.md`](MANIFEST.md) / [`docs/BUILD.md`](docs/BUILD.md)). `install.sh` stops and lists
-  whatever is missing — a plain `git clone` will not boot until all of it is in place.
+- **Not shipped in git** (fetched instead): the ~3 GB Android image **and the boot binaries**
+  (kernel, initrd, Pongo, vulkan driver). `install.sh` auto-fetches all of them from the
+  `v0.1-exp` GitHub release and verifies each against a pinned sha256; if anything is missing or
+  a checksum fails it stops and says so. (To build from source instead, see
+  [`MANIFEST.md`](MANIFEST.md) / [`docs/BUILD.md`](docs/BUILD.md).)
 - Apple firmware is **never redistributed** — it is generated on your device from your own
   iOS (see [`docs/FIRMWARE-AND-LEGAL.md`](docs/FIRMWARE-AND-LEGAL.md)).
 

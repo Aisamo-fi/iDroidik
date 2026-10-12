@@ -5,8 +5,9 @@ Device: iPhone 7 (iPhone9,3), iOS 15.8.8, rootful palera1n jailbreak. Android: A
 (TrebleDroid GSI, treble_arm64), Sandcastle kernel 5.4 (16 KB pages).
 
 > This table describes the maintainer's fully-set-up device. The **shipped image is plain
-> Android (GSI)** — the Pixel look and apps come from `pixelify.sh` (not baked in), and
-> persistent `/data` is only set up by the advanced `./android.sh deploy` path (see notes).
+> Android (GSI)** — the Pixel look and apps come from `pixelify.sh` (not baked in). Persistent
+> `/data` is provisioned by `setup-device.sh` by default (it falls back to a RAM `/data` only if
+> the phone is low on free space); `./android.sh deploy` is the advanced path that also does it.
 > Single source of truth for status — update it whenever behavior changes.
 
 ## Works (on a fully-set-up device)
@@ -22,7 +23,7 @@ Device: iPhone 7 (iPhone9,3), iOS 15.8.8, rootful palera1n jailbreak. Android: A
 | zram swap | ✅ | lzo-rle, ~1.2 GB (kernel has no lz4 backend). |
 | Thermal management | ✅ | sc-thermal.sh caps CPU by battery temp (no cpuidle driver exists). |
 | Pixel look | ⚠️ via pixelify | Lawnchair + Lawnicons, dark, circle icons, wallpaper — applied by `pixelify.sh`, NOT in the shipped image. |
-| Persistent /data | ⚠️ deploy only | Raw-mapped userdata.img survives reboot, but it is created only by `./android.sh deploy`. A plain boot uses a RAM `/data` that resets. |
+| Persistent /data | ✅ by default (new) | `setup-device.sh` creates a raw-mapped `userdata.img` so `/data` survives reboot; falls back to RAM only when the phone lacks free space (or `NO_PERSIST=1`). The mechanism is proven (it ran via `./android.sh deploy`); the `setup-device.sh` integration is new and **not yet re-verified end-to-end on a fresh device**. |
 
 ## Does NOT work
 

@@ -36,6 +36,25 @@ xz --format=lzma --lzma1=preset=9,lc=3,lp=0,pb=2,dict=8MiB -c arch/arm64/boot/Im
 `kbuild/` (gcc 9, ubuntu 20.04) exists only to reproduce the gcc-9 failure — do not
 ship kernels from it (they reset the phone to iOS; see TECHNICAL-NOTES).
 
+### Built-in initramfs (`CONFIG_INITRAMFS_SOURCE`)
+
+`work/android16-kernel.config` sets `CONFIG_INITRAMFS_SOURCE="/src/ramdisk.cpio"` — the kernel
+embeds a tiny ramdisk: the Android first-stage `init` (bionic, AOSP — Apache-2.0) plus
+`fstab.ranchu`. It is **not** in this repo, but you already have both files inside
+`work/debug-initrd.cpio.gz`: the same `init` (same BuildID) is there as `android-init`, and
+`fstab.ranchu` is byte-identical. To rebuild the kernel, repack those two into a `ramdisk.cpio`
+at `/src/ramdisk.cpio` in the build container, or set `CONFIG_INITRAMFS_SOURCE=""` to build
+without the built-in ramdisk and rely only on the external initrd passed at boot.
+
+## Boot initrd (`work/debug-initrd.cpio.gz`)
+
+The external boot ramdisk `pongo-linux` loads (`INITRD=`) is the Project Sandcastle **debug**
+root filesystem: a buildroot image (busybox, readline, X11, etc. — GPL-2.0/other). It is shipped
+unmodified on the release; its corresponding source is
+[`corellium/sandcastle-buildroot`](https://github.com/corellium/sandcastle-buildroot) (see
+`NOTICE`). We do not rebuild it — fetch the pinned binary via `install.sh`, or rebuild buildroot
+from that tree if you want to change it.
+
 ## Loaders (`loader/pongo-*`)
 
 macOS arm64 binaries built from the C in `loader/`. They need libusb:

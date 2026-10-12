@@ -70,6 +70,7 @@ docs, and the polish items in `ROADMAP.md` addressed.
 
 ## Where to start
 
-If unsure, start with **ROADMAP task T0** (reconcile the image — no phone needed),
-then **T1** (strip Apple firmware — the release blocker), then **T2** (image hosting
-+ flasher). T3–T6 are polish and need the phone.
+T0 (reconcile the image), T1 (strip Apple firmware) and T2 (host binaries + one-command
+installer) are **done**: the image is canonical and firmware-free, and `install.sh` fetches +
+sha-verifies everything from the `v0.1-exp` release. If unsure, pick up the remaining polish
+in ROADMAP (T3–T6) — those need the phone.

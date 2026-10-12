@@ -17,13 +17,21 @@ Project Sandcastle / linux-sandcastle (Corellium)  —  GPL-2.0
   License: GPL-2.0 — see psc/LICENSE. The loaders in loader/ (pongo-bootr,
   pongo-linux, pongo-shell) are derived from Corellium's load-linux.c.
   GPL-2.0 corresponding source for the built kernel (work/Image-a16f.lzma):
-    base   = corellium/linux-sandcastle @ commit 0c2f7dda13d67bb7e06123df516f8bdb1000a79b
-             (Linux 5.4.14)
-    patch  = kernel-patches/idroidik-linux-sandcastle-5.4.14.patch (our changes to
-             binder.c, kernel/bpf/cgroup.c, drivers/power/reset/hx-reboot.c)
-    config = work/android16-kernel.config ; toolchain = gcc 7.5 (kbuild7/Dockerfile)
+    base    = corellium/linux-sandcastle @ commit 0c2f7dda13d67bb7e06123df516f8bdb1000a79b
+              (Linux 5.4.14)
+    patch   = kernel-patches/idroidik-linux-sandcastle-5.4.14.patch (our changes to
+              binder.c, kernel/bpf/cgroup.c, drivers/power/reset/hx-reboot.c)
+    config  = work/android16-kernel.config ; toolchain = gcc 7.5 (kbuild7/Dockerfile)
+    initramfs = the config embeds a built-in ramdisk (CONFIG_INITRAMFS_SOURCE=/src/ramdisk.cpio):
+              the Android first-stage init (bionic, AOSP — Apache-2.0) + fstab.ranchu. Both are
+              already present inside work/debug-initrd.cpio.gz (as `android-init` + `fstab.ranchu`).
+              See docs/BUILD.md → "Built-in initramfs".
   Clone the base at that commit, `git apply` the patch, build with that config — see
   docs/BUILD.md. If you redistribute the kernel binary, ship these alongside it.
+
+  work/debug-initrd.cpio.gz (the external boot ramdisk, hosted on the release) is the Project
+  Sandcastle debug root filesystem — a buildroot image containing GPL-2.0 programs (busybox et al.).
+  It is shipped UNMODIFIED; corresponding source = corellium/sandcastle-buildroot (above).
 
 mxml (Michael R Sweet)  —  Apache-2.0 (with static-linking exception)
   XML parser bundled inside the touch daemon.
@@ -51,9 +59,11 @@ SwiftShader (Google)  —  Apache-2.0
   Source: https://github.com/google/swiftshader
 
 TrebleDroid GSI / Android Open Source Project (Google + TrebleDroid)  —  Apache-2.0
-  The Android 16 system image (GSI) that runs on top of the kernel.
-  https://github.com/TrebleDroid/treble_experimentations
-  NOT redistributed in this git repo; fetched/built per MANIFEST.md.
+  The Android 16 system image (GSI) that runs on top of the kernel. It is built into the
+  firmware-free `nand-a16` image distributed on the v0.1-exp GitHub release (Apache-2.0
+  permits redistribution); it is NOT stored in this git repo.
+  Upstream: https://github.com/TrebleDroid/treble_experimentations
+  Base GSI: TrebleDroid system-td-arm64-vanilla-old (ci-20250617).
 
 Apple Inc. firmware (touch, Wi-Fi, Bluetooth, syscfg)
   REQUIRED at runtime but NEVER redistributed by this project. It is extracted
