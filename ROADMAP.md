@@ -21,14 +21,14 @@ ship a single, known image.
 if needed; update `nand-a16.sha256`.
 **Done when:** local sha == marker, and `docs/STATE.md` records it.
 
-## T1 — Strip Apple firmware from the image; generate it on-device (P0)
+## T1 — Strip Apple firmware from the image; generate it on-device (P0) — ✅ DONE
 **Status (2026-10-10): legal blocker CLEARED — verified on-device that the shipped
 `nand` image is already firmware-free** (no firmware in /vendor, /system, /odm). The
 Apple/Broadcom firmware lives only on the user's own Android APFS volume
 (`/efs/usr/share/firmware`: touch `D10.mtprops` + brcmfmac 4355 Wi-Fi), copied from
 the user's own iOS. `tools/gen-firmware.sh` added to do that copy on-device. See
-`docs/FIRMWARE-AND-LEGAL.md`. **Remaining:** verify the iOS source path and run
-`gen-firmware.sh` on a freshly-created volume (needs an iOS boot).
+`docs/FIRMWARE-AND-LEGAL.md`. **2026-10-12:** validated end-to-end — the Android volume was
+wiped, firmware regenerated from the device's own iOS 15.8.8, and Android 16 booted from it.
 
 **Goal:** the distributed Android image contains ZERO Apple/Broadcom proprietary
 firmware. Firmware is (re)generated on each user's device from their own iOS, the
@@ -51,11 +51,10 @@ v0.1-exp release; `install.sh` fetches + sha-verifies every one and reassembles 
 `work/debug-initrd.cpio.gz`, `pongo-rel/Pongo-2.6.1.bin`, `patch-vulkan/vulkan.pastel.so`).
 Not just the image — a clone with only the image still can't boot.
 **Why:** 3 GB image, GitHub caps release assets at 2 GB/file; the boot blobs are also absent.
-**Where:** `tools/split-image.sh` (done) splits the image into <2 GB parts; `install.sh`
-currently auto-fetches only the image and must be extended to fetch the boot binaries too.
-Choose a host (torrent / archive.org / release assets), upload all of it, and set the URL(s)
-in `MANIFEST.md` + `install.sh`. Also finish `docs/BUILD.md` (initrd + dtbpack recipes are
-missing) so the binaries can be reproduced, not only downloaded.
+**Where:** `tools/split-image.sh` splits the image into <2 GB parts; `install.sh` fetches the
+parts and the boot binaries from the release and verifies each against a pinned sha256.
+**Still open (P2):** `docs/BUILD.md` has no recipe for `dtbpack` yet (it is the unmodified
+Project Sandcastle one), so that binary can be downloaded/vendored but not yet rebuilt from the docs.
 **Done when:** on a clean Mac, `git clone … && ./install.sh` fetches+verifies the image AND
 the boot binaries, and boots Android with no manual file shuffling.
 

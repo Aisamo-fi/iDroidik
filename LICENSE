@@ -19,17 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
---------------------------------------------------------------------------------
-
-This license covers ONLY the original scripts, patches, configuration and
-documentation authored by this project (see NOTICE for the file list).
-
-It does NOT cover the third-party components this project builds on — Project
-Sandcastle, PongoOS, palera1n, SwiftShader, the Android GSI, and others — which
-remain under their own licenses. See NOTICE.
-
-It does NOT and CANNOT grant any right to Apple Inc. proprietary firmware or
-software. This project never redistributes Apple firmware; such firmware is
-extracted on the user's own device from their own iOS installation. See
-docs/FIRMWARE-AND-LEGAL.md.

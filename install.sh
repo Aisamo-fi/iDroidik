@@ -19,7 +19,6 @@ warn() { printf '\033[33m! %s\033[0m\n' "$*"; }
 die()  { printf '\033[31m✗ %s\033[0m\n' "$*"; exit 1; }
 
 # Where the image parts + boot binaries are hosted (GitHub release assets; see MANIFEST.md).
-# Private repo while experimental — a public clone can only download these once the repo is public.
 IMAGE_BASE_URL="${IMAGE_BASE_URL:-https://github.com/Aisamo-fi/iDroidik/releases/download/v0.1-exp}"
 IMAGE_BASE_NAME="nand-a16"
 # Pinned sha256 of the reassembled image. The image is verified against THIS value (baked into
@@ -188,8 +187,8 @@ if [ -n "$boot_missing" ]; then
 fi
 
 # 4. firmware note (see docs/FIRMWARE-AND-LEGAL.md)
-warn "Apple firmware (touch/Wi-Fi) is NOT shipped. It must be generated on your"
-echo "  device from your own iOS — see docs/FIRMWARE-AND-LEGAL.md (ROADMAP task T1)."
+warn "Apple firmware (touch/Wi-Fi) is NOT shipped. It is generated on your"
+echo "  device from your own iOS by ./setup-device.sh (tools/gen-firmware.sh) — see docs/FIRMWARE-AND-LEGAL.md."
 
 echo
 if [ "$step_missing" = 0 ] && [ -f "$IMAGE_BASE_NAME" ] && [ -z "$boot_missing" ]; then

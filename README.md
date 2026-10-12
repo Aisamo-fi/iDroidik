@@ -43,6 +43,9 @@ Prefer to do it by hand? Use the quick start below.
   **Never restore the phone** (that can wipe it; setup only adds a volume).
 - A **Mac** with a USB cable. **Apple Silicon only** in practice — the prebuilt pongo loaders
   (`loader/pongo-*`) are arm64 and link against Homebrew `libusb`; an Intel Mac would need them rebuilt.
+  (The x86_64 binaries in `android-sandcastle/` are the original Sandcastle macOS tooling, used only
+  by the legacy helper scripts `boot.sh`, `wait-and-load.sh` and `boot-android-shell.sh` — not by
+  `android.sh`; on Apple Silicon they need Rosetta.)
 - **macOS only.** Windows is not supported (palera1n has no Windows build); Linux hosts would need the loaders rebuilt and the scripts ported.
 - Tools: `install.sh` auto-installs [`palera1n`](https://palera.in), `sshpass`, `adb` and
   `libusb` (`sshpass`/`adb`/`libusb` via [Homebrew](https://brew.sh));
@@ -51,7 +54,7 @@ Prefer to do it by hand? Use the quick start below.
 ## Quick start
 
 **Prerequisite (one-time):** your iPhone 7 must be on **rootful** jailbroken iOS 15 with
-**OpenSSH** running (root password `alpine`) and reachable over SSH — set that up with
+**OpenSSH** running (root password `alpine` by default — see [Security](#security--read-this)) and reachable over SSH — set that up with
 [palera1n](https://palera.in) (rootful; the first run creates the fakefs and installs the
 bootstrap/SSH). Everything below drives the phone over that SSH connection, so confirm
 `ssh root@<iPhone>` works before running `setup-device.sh`.
@@ -99,6 +102,21 @@ cp config.env.example config.env      # set IOS_IP (your jailbroken iPhone's SSH
 > ⚠️ After `./android.sh deploy`, the phone is left set to stay in **Recovery** between boots
 > (needed for the tethered Android boot). That is normal — to go back to normal iOS run
 > `~/.local/bin/palera1n -n`. **Do not** "Restore" the phone in Finder (that erases it).
+
+## Security — read this
+
+This is a **development build**, not a hardened phone. While you use it:
+
+- **iOS side:** setup needs jailbroken iOS with SSH as `root`, and the default password is the
+  well-known `alpine`. Anyone on the same network can log in as root. **Change it** on the phone
+  (`passwd`) and put the new one in `config.env` (`IOS_SSH_PASS`), or keep the phone off shared
+  Wi-Fi while jailbroken.
+- **Android side:** SELinux is **permissive** and `adb` runs as **root**. `./android.sh save`
+  switches ADB to listen on **TCP port 5555** over Wi-Fi (for the bulk transfer) and it stays open
+  until Android reboots — anyone on the same network could get a root shell. Only run it on a
+  network you trust, and reboot Android afterwards.
+- **Never use it on public / café / office Wi-Fi**, and don't sign into accounts you care about
+  on the Android side.
 
 ## How it works (short version)
 

@@ -48,6 +48,9 @@ PongoOS (checkra1n team)  —  MIT
   Pre-boot execution environment used to load the kernel over checkm8.
   Source: https://github.com/checkra1n/PongoOS
   Vendored here under: pongo/  (License: MIT — see pongo/LICENSE.md)
+  pongo/apple-include/ (Availability*.h) are Apple header files under the Apple Public
+  Source License 2.0, redistributed as-is exactly as upstream PongoOS does; their license
+  headers are kept intact. They are build-time headers only and are not Apple firmware.
 
 palera1n
   checkm8 jailbreak / boot tool used to run the exploit and enter pongoOS.
@@ -60,10 +63,22 @@ SwiftShader (Google)  —  Apache-2.0
 
 TrebleDroid GSI / Android Open Source Project (Google + TrebleDroid)  —  Apache-2.0
   The Android 16 system image (GSI) that runs on top of the kernel. It is built into the
-  firmware-free `nand-a16` image distributed on the v0.1-exp GitHub release (Apache-2.0
-  permits redistribution); it is NOT stored in this git repo.
+  firmware-free `nand-a16` image distributed on the v0.1-exp GitHub release; it is NOT stored
+  in this git repo. Most of AOSP is Apache-2.0, but the image also contains components under
+  other licenses — including GPL-2.0 / LGPL programs that AOSP ships in /system (e.g. iptables,
+  parts of e2fsprogs) — each of which keeps its own license (see the image's own
+  /system/etc/NOTICE.xml.gz).
   Upstream: https://github.com/TrebleDroid/treble_experimentations
   Base GSI: TrebleDroid system-td-arm64-vanilla-old (ci-20250617).
+  Corresponding source for the GPL/LGPL programs in the image: the AOSP sources and the
+  TrebleDroid patch sets used by that CI build (https://github.com/TrebleDroid). This project
+  does not modify those programs.
+  Our modifications to the image (all made by this project, sources in this repo):
+    • vendor: 16K-page vndk-29 libraries, capex→apex conversion (docs/TECHNICAL-NOTES.md);
+    • audio HAL stub `sc_effstub` + patched libaudiohal (work/effstub/);
+    • persistent-/data mapper `scdata` + sc-userdata.sh (work/userdata/);
+    • tuning / thermal / render scripts and init .rc files (patch-vulkan/);
+    • the software Vulkan driver vulkan.pastel.so (SwiftShader, Apache-2.0; docs/BUILD.md).
 
 Apple Inc. firmware (touch, Wi-Fi, Bluetooth, syscfg)
   REQUIRED at runtime but NEVER redistributed by this project. It is extracted
@@ -83,3 +98,7 @@ Original work in THIS project (MIT, see LICENSE) — these files only:
   work/ configs + effstub/ + userdata/ sources,
   docs/, assets/lawnchair-appearance.preferences_pb, and this NOTICE.
 Everything NOT listed here belongs to its upstream above and keeps that license.
+
+The MIT license does NOT and CANNOT grant any right to Apple Inc. proprietary firmware or
+software. This project never redistributes Apple firmware; such firmware is extracted on the
+user's own device from their own iOS installation. See docs/FIRMWARE-AND-LEGAL.md.
